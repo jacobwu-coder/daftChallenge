@@ -15,16 +15,29 @@ Scurvy was a devastating disease that afflicted sailors on long voyages. In **17
 The three diagrams below show these three different views of the same data-generating process: first the incomplete but correct one (lemons → scurvy prevention), then the mistaken causal chain (acid → bacteria death → scurvy prevention), and finally the correct mechanism (vitamin C → scurvy prevention).
 
 ```{python}
-#| label: setup-environment
+#| label: setup
 #| echo: false
 #| message: false
 #| warning: false
 
 import daft
 import matplotlib.pyplot as plt
-import numpy as np
+
 plt.rcParams['figure.dpi'] = 150
 plt.rcParams['savefig.dpi'] = 300
+
+def draw_arrow(pgm, from_node, to_node):
+    """Draw a visible arrowhead on top of rendered nodes."""
+    ax  = pgm.ax
+    ctx = pgm._ctx
+    n1, n2 = pgm._nodes[from_node], pgm._nodes[to_node]
+    start = n1.get_frontier_coord(ctx.convert(n2.x, n2.y), ctx, None)
+    end   = n2.get_frontier_coord(ctx.convert(n1.x, n1.y), ctx, None)
+    ax.annotate(
+        "", xy=end, xytext=start,
+        arrowprops=dict(arrowstyle="->", color="k", lw=2,
+                        connectionstyle="arc3,rad=0"),
+    )
 ```
 
 ## DAG 1: The 1747 Understanding (Correct but Incomplete)
@@ -32,31 +45,31 @@ plt.rcParams['savefig.dpi'] = 300
 Lemons prevent scurvy—Lind had the right treatment, but not the underlying cause.
 
 ```{python}
-#| label: dag-1-1747
-#| echo: false
+#| label: fig-dag-1747
 #| fig-cap: "DAG 1: Lemons prevent scurvy (1747 — correct but incomplete)"
-
-import daft
-import matplotlib.pyplot as plt
+#| fig-width: 6
+#| fig-height: 2.5
 
 pgm = daft.PGM(dpi=150, alternate_style="outer", directed=True)
-pgm.add_node("lemons", "Lemons", 1, 1, aspect=3, scale=1.1,
+
+pgm.add_node("lemons", "Lemons", 1, 1, aspect=3, scale=1.2,
              plot_params={
                  "facecolor": "lightyellow",
                  "edgecolor": "darkgoldenrod",
                  "linewidth": 2,
                  "alpha": 0.9,
              })
-pgm.add_node("scurvy_prevention", "Scurvy\nPrevention", 3.25, 1, aspect=3, scale=1.1,
+pgm.add_node("scurvy_prevention", "Scurvy\nPrevention", 3.25, 1, aspect=3, scale=1.2,
              plot_params={
                  "facecolor": "lightgreen",
                  "edgecolor": "darkgreen",
                  "linewidth": 2,
                  "alpha": 0.9,
              })
-pgm.add_edge("lemons", "scurvy_prevention", directed=True,
-             plot_params={"head_width": 0.3, "head_length": 0.35, "linewidth": 2, "ec": "k", "fc": "k"})
+pgm.add_edge("lemons", "scurvy_prevention", directed=False,
+             plot_params={"color": "k", "linewidth": 2})
 pgm.render()
+draw_arrow(pgm, "lemons", "scurvy_prevention")
 plt.show()
 ```
 
@@ -65,50 +78,41 @@ plt.show()
 People thought acid killed the bacteria that caused scurvy—so they swapped lemons for limes or vinegar and lost the benefit.
 
 ```{python}
-#| label: dag-2-misguided
-#| echo: false
+#| label: fig-dag-misguided
 #| fig-cap: "DAG 2: Acid kills bacteria that cause scurvy (misguided belief)"
-
-import daft
-import matplotlib.pyplot as plt
+#| fig-width: 4
+#| fig-height: 5
 
 pgm = daft.PGM(dpi=150, alternate_style="outer", directed=True)
-pgm.add_node("acid", "Acid", 1, 2, aspect=2.5, scale=1.1,
+
+pgm.add_node("acid", "Acid", 1, 2, aspect=2.5, scale=1.2,
              plot_params={
                  "facecolor": "mistyrose",
                  "edgecolor": "indianred",
                  "linewidth": 2,
                  "alpha": 0.9,
              })
-pgm.add_node("bacteria_death", "Bacteria\nDeath", 1, 1, aspect=2.5, scale=1.1,
+pgm.add_node("bacteria_death", "Bacteria\nDeath", 1, 1, aspect=2.5, scale=1.2,
              plot_params={
                  "facecolor": "lavenderblush",
                  "edgecolor": "crimson",
                  "linewidth": 2,
                  "alpha": 0.9,
              })
-pgm.add_node("scurvy_prevention", "Scurvy\nPrevention", 1, 0, aspect=2.5, scale=1.1,
+pgm.add_node("scurvy_prevention", "Scurvy\nPrevention", 1, 0, aspect=2.5, scale=1.2,
              plot_params={
                  "facecolor": "lightgreen",
                  "edgecolor": "darkgreen",
                  "linewidth": 2,
                  "alpha": 0.9,
              })
-pgm.add_edge("acid", "bacteria_death", directed=False, plot_params={"color": "k", "linewidth": 2})
-pgm.add_edge("bacteria_death", "scurvy_prevention", directed=False, plot_params={"color": "k", "linewidth": 2})
+pgm.add_edge("acid", "bacteria_death", directed=False,
+             plot_params={"color": "k", "linewidth": 2})
+pgm.add_edge("bacteria_death", "scurvy_prevention", directed=False,
+             plot_params={"color": "k", "linewidth": 2})
 pgm.render()
-
-ax = pgm.ax
-ctx = pgm._ctx
-edges = [("acid", "bacteria_death"), ("bacteria_death", "scurvy_prevention")]
-for n1_name, n2_name in edges:
-    n1, n2 = pgm._nodes[n1_name], pgm._nodes[n2_name]
-    xy2 = ctx.convert(n2.x, n2.y)
-    xy1 = ctx.convert(n1.x, n1.y)
-    start = n1.get_frontier_coord(xy2, ctx, None)
-    end = n2.get_frontier_coord(xy1, ctx, None)
-    ax.annotate("", xy=end, xytext=start, xycoords="data", textcoords="data",
-                arrowprops=dict(arrowstyle="->", color="k", lw=2, connectionstyle="arc3,rad=0"))
+draw_arrow(pgm, "acid", "bacteria_death")
+draw_arrow(pgm, "bacteria_death", "scurvy_prevention")
 plt.show()
 ```
 
@@ -117,39 +121,30 @@ plt.show()
 Vitamin C prevents scurvy—the true mechanism that explains why lemons worked and why the acid story was wrong.
 
 ```{python}
-#| label: dag-3-1928
-#| echo: false
+#| label: fig-dag-1928
 #| fig-cap: "DAG 3: Vitamin C prevents scurvy (1928 — complete and correct)"
-
-import daft
-import matplotlib.pyplot as plt
+#| fig-width: 6
+#| fig-height: 2.5
 
 pgm = daft.PGM(dpi=150, alternate_style="outer", directed=True)
-pgm.add_node("vitamin_c", "Vitamin C", 1, 1, aspect=3, scale=1.1,
+
+pgm.add_node("vitamin_c", "Vitamin C", 1, 1, aspect=3, scale=1.2,
              plot_params={
                  "facecolor": "lightcyan",
                  "edgecolor": "teal",
                  "linewidth": 2,
                  "alpha": 0.9,
              })
-pgm.add_node("scurvy_prevention", "Scurvy\nPrevention", 3.25, 1, aspect=3, scale=1.1,
+pgm.add_node("scurvy_prevention", "Scurvy\nPrevention", 3.25, 1, aspect=3, scale=1.2,
              plot_params={
                  "facecolor": "lightgreen",
                  "edgecolor": "darkgreen",
                  "linewidth": 2,
                  "alpha": 0.9,
              })
-pgm.add_edge("vitamin_c", "scurvy_prevention", directed=False, plot_params={"color": "k", "linewidth": 2})
+pgm.add_edge("vitamin_c", "scurvy_prevention", directed=False,
+             plot_params={"color": "k", "linewidth": 2})
 pgm.render()
-
-ax = pgm.ax
-ctx = pgm._ctx
-n1, n2 = pgm._nodes["vitamin_c"], pgm._nodes["scurvy_prevention"]
-xy2 = ctx.convert(n2.x, n2.y)
-xy1 = ctx.convert(n1.x, n1.y)
-start = n1.get_frontier_coord(xy2, ctx, None)
-end = n2.get_frontier_coord(xy1, ctx, None)
-ax.annotate("", xy=end, xytext=start, xycoords="data", textcoords="data",
-            arrowprops=dict(arrowstyle="->", color="k", lw=2, connectionstyle="arc3,rad=0"))
+draw_arrow(pgm, "vitamin_c", "scurvy_prevention")
 plt.show()
 ```
